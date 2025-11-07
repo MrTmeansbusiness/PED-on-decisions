@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PED Price Direction Quiz</title>
+  <style>
+    :root{--bg:#0b1020;--card:#121933;--card2:#0e1530;--text:#e8ecf5;--muted:#a8b3cf;--border:#263452;--accent:#7c6bf3;--good:#22c55e;--bad:#ef4444}
+    *{box-sizing:border-box}
+    body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);background:radial-gradient(1200px 800px at 10% -10%, #1b2448 0%, #0b1020 40%), var(--bg)}
+    .wrap{max-width:900px;margin:0 auto;padding:24px 16px}
+    header.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    h1{margin:0}
+    .pill{font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:4px 8px}
+    .card{background:linear-gradient(180deg, rgba(20,30,70,.6), rgba(15,22,55,.9));border:1px solid var(--border);border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);overflow:hidden}
+    .body{padding:16px}
+    .content{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+    .left{display:flex;flex-direction:column;gap:12px}
+    .thumb-wrap{position:relative}
+    .thumb{width:100%;height:260px;object-fit:cover;border-radius:12px;border:1px solid var(--border);background:#0b1020}
+    .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .tag{font-size:12px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:4px 8px}
+    .name{font-size:20px;font-weight:700}
+    .right{display:flex;flex-direction:column;gap:12px}
+    .prompt{font-size:16px}
+    .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .btn{appearance:none;border:1px solid var(--border);background:#334270;color:var(--text);padding:12px;border-radius:12px;cursor:pointer;font-weight:600}
+    .btn.primary{background:var(--accent)}
+    .result{min-height:24px}
+    .good{color:var(--good);font-weight:700}
+    .bad{color:var(--bad);font-weight:700}
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+    .bar{height:8px;background:#182248;border:1px solid var(--border);border-radius:999px;overflow:hidden;min-width:160px}
+    .bar>i{display:block;height:100%;background:linear-gradient(90deg,#7c6bf3,#22c55e);width:0%}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <h1>Price Direction (PED)</h1>
+      <div class="pill">Q <span id="qnum">1</span>/<span id="qtotal">10</span> • Score <span id="score">0</span></div>
+    </header>
+    <div class="card">
+      <div class="body">
+        <div class="content">
+          <div class="left">
+            <div class="thumb-wrap"><img id="img" class="thumb" loading="lazy" referrerpolicy="no-referrer" alt="Product" /></div>
+            <div class="name" id="name">&nbsp;</div>
+            <div class="meta">
+              <span class="tag" id="elasticityTag">&nbsp;</span>
+              <span class="tag" id="edVal">|E| = --</span>
+            </div>
+          </div>
+          <div class="right">
+            <div class="prompt"><strong>Goal:</strong> increase total revenue. Given the current price range and the elasticity shown, should the firm increase or decrease the price?</div>
+            <div class="btns">
+              <button class="btn" id="btnDecrease">Decrease price</button>
+              <button class="btn" id="btnIncrease">Increase price</button>
+            </div>
+            <div class="result" id="feedback"></div>
+          </div>
+        </div>
+        <div class="footer">
+          <div class="pill">Round progress</div>
+          <div class="bar"><i id="progress"></i></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ROUNDS = 10;
+    // Rule recap: Elastic demand -> lower price to raise revenue; Inelastic demand -> raise price to raise revenue
+    const BANK = [
+      {name:'Bottled water', img:'https://images.unsplash.com/photo-1564859227551-c03cb7a6127b?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Tap water', img:'https://images.unsplash.com/photo-1528825871115-3581a5387919?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'Insulin', img:'https://images.unsplash.com/photo-1580281657527-47f249e8f3b9?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'Energy drink', img:'https://images.unsplash.com/photo-1613478223719-2ab3b6a91e76?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Daily bread', img:'https://images.unsplash.com/photo-1514511547119-786a1e59f434?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'Starbucks latte', img:'https://images.unsplash.com/photo-1511920170033-f8396924c348?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Cigarettes', img:'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'Chewing gum', img:'https://images.unsplash.com/photo-1615486364436-3d6b7a3e02aa?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Basic electricity', img:'https://images.unsplash.com/photo-1509395176047-4a66953fd231?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'Concert ticket', img:'https://images.unsplash.com/photo-1506157786151-b8491531f063?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Generic cereal', img:'https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Life-saving surgery', img:'https://images.unsplash.com/photo-1580281657527-47f249e8f3b9?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'New smartphone', img:'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Prescription glasses', img:'https://images.unsplash.com/photo-1519060825752-cf3f9c7c1d9c?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'Designer sunglasses', img:'https://images.unsplash.com/photo-1511407397940-d57f68e81203?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Gasoline (short run)', img:'https://images.unsplash.com/photo-1542367597-8849eb2f8a43?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'Streaming subscription', img:'https://images.unsplash.com/photo-1517602302552-471fe67acf66?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'},
+      {name:'Textbook (required)', img:'https://images.unsplash.com/photo-1519681393784-d120267933ba?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'inelastic'},
+      {name:'Phone case', img:'https://images.unsplash.com/photo-1510554310709-16fdd64a4f93?fm=jpg&q=80&fit=crop&w=640&h=420', elasticity:'elastic'}
+    ];
+
+    let round=0, score=0; const used=new Set();
+    const els={qnum:document.getElementById('qnum'), qtotal:document.getElementById('qtotal'), score:document.getElementById('score'), img:document.getElementById('img'), name:document.getElementById('name'), tag:document.getElementById('elasticityTag'), feedback:document.getElementById('feedback'), progress:document.getElementById('progress')};
+    els.qtotal.textContent=ROUNDS;
+
+    let current=null; // {idx, item, ed}
+
+    function nextItem(){
+      const candidates = BANK.map((_,i)=>i).filter(i=>!used.has(i));
+      if(candidates.length===0){ finish(); return; }
+      const idx = candidates[Math.floor(Math.random()*candidates.length)];
+      used.add(idx);
+      const item = BANK[idx];
+      const ed = item.elasticity==='elastic' ? randInRange(1.2,2.5) : randInRange(0.2,0.8);
+      current = {idx, item, ed};
+    }
+
+    function render(){
+      const {item, ed} = current;
+      els.qnum.textContent = round;
+      els.score.textContent = score;
+      els.img.src = item.img; els.img.alt = item.name;
+      els.name.textContent = item.name;
+      els.tag.textContent = item.elasticity === 'elastic' ? 'Elastic demand' : 'Inelastic demand';
+      document.getElementById('edVal').textContent = `|E| = ${ed.toFixed(2)}`;
+      els.feedback.textContent = '';
+      els.progress.style.width = `${((round-1)/ROUNDS)*100}%`;
+    }
+
+    function handle(action){
+      if(!current) return;
+      const e = current.item.elasticity;
+      const correctAction = e==='elastic' ? 'decrease' : 'increase';
+      const ok = (action===correctAction);
+      els.feedback.innerHTML = ok ? '<span class="good">Correct. ' + (e==='elastic' ? 'Lower price raises TR when demand is elastic.' : 'Raise price raises TR when demand is inelastic.') + '</span>' : '<span class="bad">Not quite. ' + (e==='elastic' ? 'With elastic demand, decreasing price increases TR.' : 'With inelastic demand, increasing price increases TR.') + '</span>';
+      if(ok) score += 1;
+      setTimeout(()=>{
+        if(round>=ROUNDS){ finish(); return; }
+        round += 1; nextItem(); render();
+      }, 900);
+    }
+
+    function finish(){
+      const total = ROUNDS; // one decision per round
+      const container = document.querySelector('.body');
+      container.innerHTML = `<div class="content" style="display:block">
+        <h2>Done</h2>
+        <p>Your score: <strong>${score} / ${total}</strong></p>
+        <button class="btn primary" id="restart">Restart</button>
+      </div>`;
+      document.getElementById('restart').addEventListener('click', ()=>{
+        score=0; round=1; used.clear();
+        // Rebuild the card UI
+        location.reload();
+      });
+    }
+
+    document.getElementById('btnDecrease').addEventListener('click', ()=>handle('decrease'));
+    document.getElementById('btnIncrease').addEventListener('click', ()=>handle('increase'));
+
+    // Init
+    function randInRange(a,b){ return a + Math.random()*(b-a); }
+    round = 1; nextItem(); render();
+  </script>
+</body>
+</html>
